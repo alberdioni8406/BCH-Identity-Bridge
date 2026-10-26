@@ -2,11 +2,43 @@
 
 **One identity. Two sovereign keys. No central authority.**
 
-Connect your Bitcoin Cash wallet and Nostr identity with independently verifiable cryptographic proofs. Publish your binding, authenticate across applications, and remain in control of your keys.
+Cryptographically link a Bitcoin Cash address to a Nostr public key with independently verifiable proofs. Publish the binding on Nostr relays, authenticate across applications, and remain in full control of your keys.
 
-![BCH Identity Bridge](https://img.shields.io/badge/BCH-Identity%20Bridge-0AC18E?style=for-the-badge)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
+> Built from scratch for the Paytaca-sponsored BCH + Nostr identity bounty.
+
+---
+
+## Live Demo
+
+**https://bch-id-bridge.vercel.app/**
+
+| Resource | Link |
+|----------|------|
+| Live application | [bch-id-bridge.vercel.app](https://bch-id-bridge.vercel.app/) |
+| Source code | [github.com/alberdioni8406/BCH-Identity-Bridge](https://github.com/alberdioni8406/BCH-Identity-Bridge) |
+| **Bounty evaluator walkthrough** | [docs/bounty-demo.md](https://github.com/alberdioni8406/BCH-Identity-Bridge/blob/main/docs/bounty-demo.md) |
+| Protocol specification | [docs/protocol-spec.md](https://github.com/alberdioni8406/BCH-Identity-Bridge/blob/main/docs/protocol-spec.md) |
+| Security model | [docs/security-model.md](https://github.com/alberdioni8406/BCH-Identity-Bridge/blob/main/docs/security-model.md) |
+| Architecture | [docs/architecture.md](https://github.com/alberdioni8406/BCH-Identity-Bridge/blob/main/docs/architecture.md) |
+
+---
+
+## For Bounty Evaluators
+
+Start here:
+
+1. Open the live app → [https://bch-id-bridge.vercel.app/](https://bch-id-bridge.vercel.app/)
+2. Follow the guided walkthrough → **[docs/bounty-demo.md](https://github.com/alberdioni8406/BCH-Identity-Bridge/blob/main/docs/bounty-demo.md)**
+
+The walkthrough covers:
+- Connecting identities and creating a binding
+- Independent cryptographic verification
+- Challenge-response authentication
+- Deliberate tampering detection
+- Replay rejection
+- Export for third-party use
+
+---
 
 ## Overview
 
@@ -14,183 +46,142 @@ BCH Identity Bridge is a self-sovereign identity protocol that cryptographically
 
 - **Independently verifiable** — any third party can validate the proofs without trusting this application
 - **Decentralized** — published and discovered via Nostr relays
-- **Non-custodial** — private keys never leave the user's wallet or signer
+- **Non-custodial** — private keys never leave the user’s wallet or signer
 - **Replay-resistant** — challenges, nonces, domain separation, and expiry protect against common attacks
 
-This project was built from scratch to meet the Paytaca-sponsored BCH bounty requirements for a complete, working proof-of-concept linking BCH and Nostr identities.
+A valid binding proves only that the same party controlled both keys at the time of signing. It does **not** prove legal identity, reputation, or ongoing control after key compromise.
 
-## Live Demo
-
-Deployed on Vercel: *(add your deployment URL after `vercel deploy`)*
+---
 
 ## Core Features
 
-- Connect BCH address (message-signing proof) and Nostr identity (NIP-07 / event signature)
+- Connect BCH address (Bitcoin-style signed message) and Nostr identity (NIP-07 / event signature)
 - Canonical binding record with deterministic serialization
-- Dual cryptographic proofs (BCH signed message + Nostr event)
+- Dual cryptographic proofs (BCH signed message + Nostr event kind 31234)
 - Publish / discover bindings on configurable Nostr relays
 - Independent verifier that rejects tampering, replay, expiry, and mismatched identities
-- Challenge-response authentication flow
+- Challenge-response authentication flow with anti-replay protection
 - Exportable, portable binding records
-- Developer-friendly verification library and protocol specification
-- Polished UI with BCH green + ParyonUSD / Paytaca-inspired design system
+- Local binding storage (My Identity)
+- Developer-friendly verification library (`src/lib/identity`)
+- Polished dark UI with Bitcoin Cash green design system
 
-## Quick Start
+---
+
+## Quick Start (local)
 
 ```bash
-# Clone
-git clone https://github.com/YOUR_USER/bch-identity-bridge.git
-cd bch-identity-bridge
-
-# Install
+git clone https://github.com/alberdioni8406/BCH-Identity-Bridge.git
+cd BCH-Identity-Bridge
 npm install
-
-# Development
 npm run dev
-
-# Tests
-npm test
-
-# Production build
-npm run build
 ```
 
-## Architecture
+Open [http://localhost:3000](http://localhost:3000).
+
+```bash
+npm test          # unit tests
+npm run build     # production build
+```
+
+---
+
+## How it works
+
+1. User provides a BCH address + Nostr public key.
+2. App creates a **canonical binding** (deterministic JSON + `bindingId` = SHA-256 of the fields).
+3. User signs a domain-separated message with their BCH wallet.
+4. User signs a Nostr event (kind `31234`) with their Nostr key (preferably via NIP-07).
+5. Both proofs are assembled into a portable `IdentityBinding` record.
+6. The record can be stored locally, exported as JSON, published to relays, or independently verified by anyone.
+
+Third parties never need to trust this application — only the public binding record and the open protocol rules.
+
+---
+
+## Protocol Summary (v1.0.0)
+
+- **Protocol ID:** `bch-identity-bridge`
+- **Nostr event kind:** `31234` (addressable)
+- **Canonical serialization:** keys sorted recursively, no whitespace
+- **BCH proof:** Bitcoin-style signed message with explicit domain-separation prefix
+- **Binding ID:** SHA-256 of the canonical fields (hex)
+- **Authentication:** short-lived challenge with nonce, audience, action, and expiry
+
+Full specification: [docs/protocol-spec.md](https://github.com/alberdioni8406/BCH-Identity-Bridge/blob/main/docs/protocol-spec.md)
+
+---
+
+## Project Structure
 
 ```
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── page.tsx            # Overview
-│   ├── link/               # Link Identity flow
-│   ├── identity/           # My Identity
-│   ├── discover/           # Discover bindings
+│   ├── link/               # Create binding flow
+│   ├── identity/           # Local bindings
+│   ├── discover/           # Relay search
 │   ├── verify/             # Independent verifier
 │   ├── authenticate/       # Challenge-response demo
-│   ├── developer/          # Protocol & integration docs
-│   └── settings/           # Relays, network, privacy
-├── components/             # UI components
+│   ├── developer/          # Integration notes
+│   └── settings/           # Relays & privacy
 ├── lib/
-│   ├── identity/           # Core protocol (canonical, binding, proofs, verify)
-│   ├── auth/               # Challenge / response / session
-│   ├── bch/                # BCH address & message verification
-│   └── nostr/              # Nostr event helpers & relay client
-├── types/                  # Shared TypeScript types
-docs/                       # Protocol, security, architecture
+│   ├── identity/           # Core protocol (canonicalize, binding, verify)
+│   ├── auth/               # Challenge + replay protection
+│   ├── bch/                # BCH message verification
+│   └── nostr/              # Event helpers + relay discovery
+├── types/                  # Shared TypeScript schema
+docs/                       # Protocol, security, architecture, demo script
 tests/                      # Vitest unit & adversarial tests
 ```
 
-## Protocol Summary (v1)
+---
 
-See full specification in [`docs/protocol-spec.md`](docs/protocol-spec.md).
+## Security Model (summary)
 
-A binding consists of:
+| Threat | Mitigation |
+|--------|------------|
+| Signature forgery | Standard ECDSA verification (BCH message + Nostr event) |
+| Payload tampering | Binding ID = hash of canonical fields; both proofs cover it |
+| Cross-protocol reuse | Explicit domain-separation strings |
+| Replay attacks | Unique challenge IDs + nonces + short TTL + seen-set |
+| Malicious relays | All records re-verified locally; cache is never trusted |
+| Wrong network | Network is part of the canonical record and BCH proof |
+| Key leakage | Application never accepts or stores private keys / seeds |
 
-1. **Canonical Binding Record** (deterministic JSON serialization)
-2. **BCH Proof** — Bitcoin-style signed message over a domain-separated payload that includes the binding ID, nonce, and Nostr pubkey
-3. **Nostr Proof** — a signed Nostr event (custom kind in the 30000+ addressable range) that references the same binding ID and BCH address
+See [docs/security-model.md](https://github.com/alberdioni8406/BCH-Identity-Bridge/blob/main/docs/security-model.md).
 
-Verification rules reject:
-
-- Invalid or mismatched signatures
-- Altered payloads
-- Wrong network / address derivation
-- Expired or reused challenges
-- Superseded / revoked records (when present)
-- Unsupported protocol versions
-
-## Security Model
-
-Documented in [`docs/security-model.md`](docs/security-model.md).
-
-Key protections:
-
-- Canonical serialization (no ordinary `JSON.stringify`)
-- Domain separation for signing payloads
-- Cryptographically secure nonces + short-lived challenges
-- Audience / origin binding on authentication challenges
-- Local verification only — relays and caches are untrusted
-- No private keys or seed phrases ever accepted by the application
+---
 
 ## Supported Signing
 
 | Identity | Method | Notes |
 |----------|--------|-------|
-| Nostr | NIP-07 browser extension | Preferred. NIP-46 remote signing investigated. |
-| BCH | Signed message (Bitcoin-style) | User signs the exact challenge in a compatible wallet (Electron Cash, mainnet.cash, Paytaca where message signing is exposed) and pastes the signature. Direct wallet injection is used when available. |
+| Nostr | NIP-07 browser extension | Preferred (Alby, nos2x, etc.). One-click connect & sign. |
+| BCH | Bitcoin-style signed message | Sign the exact message in Electron Cash, mainnet.cash, or compatible wallet, then paste the signature. |
 
-**Important**: The application never asks for private keys or recovery phrases.
+**Important:** The application never asks for private keys or recovery phrases.
 
-## Bounty Demonstration Walkthrough
-
-See [`docs/bounty-demo.md`](docs/bounty-demo.md) for the exact evaluator script covering:
-
-1. Connect identities
-2. Create & publish binding
-3. Independent verification
-4. Challenge-response authentication
-5. Tampering detection
-6. Replay rejection
-7. Export for third-party use
-
-## Stretch Goals Implemented
-
-- Identity-based BCH payment URI generation from a verified binding
-- Revocation / supersession event structure
-- Reusable verification module (`lib/identity/verify.ts`) usable by other applications
-- Clear developer integration examples
-
-## Branding
-
-Primary accent: Bitcoin Cash green (`#0AC18E`). Complementary accents drawn from ParyonUSD (purple/gradient) and Paytaca visual language. Accurate official assets used where permitted; this is an independent project.
+---
 
 ## Known Limitations
 
-- Not all BCH wallets expose arbitrary message signing in the browser; fallback is manual sign + paste.
-- No formal security audit has been performed.
-- Relays may be unavailable; the UI clearly distinguishes “cryptographically valid” from “published & currently discoverable”.
-- Linking a BCH address to a Nostr key makes future financial activity more linkable — users are informed.
+- Not every BCH wallet exposes arbitrary message signing in the browser; the path is “sign in wallet → paste signature”.
+- No formal third-party security audit has been performed.
+- Relays may be unavailable; the UI distinguishes “cryptographically valid” from “currently discoverable”.
+- Publicly linking a BCH address to a Nostr key increases linkability of financial activity — users are informed.
+
+---
 
 ## License
 
 MIT
 
-## Credits
-
-Built for the Paytaca-sponsored BCH + Nostr identity bounty. Inspired by the self-sovereignty principles of both Bitcoin Cash and Nostr.
-
 ---
 
-## Current Implementation Status (this session)
+## Credits
 
-### Done
-- Full protocol specification (canonical form, domain separation, event kinds, verification rules)
-- Core TypeScript library: canonicalize, binding creation, independent verifier, challenge-response + replay protection
-- BCH message verification interface (ready for bitcoinjs-message / mainnet.cash)
-- Nostr event structure helpers (kind 31234)
-- Complete App Router pages: Overview, Link Identity, My Identity, Discover, Verify, Authenticate, Developer, Settings
-- Dark premium UI with BCH green design tokens
-- Security model & bounty evaluator walkthrough docs
-- Vitest unit tests for canonicalization and binding ID integrity
+Built as an independent project for the Paytaca-sponsored Bitcoin Cash + Nostr identity bounty.  
+Inspired by the self-sovereignty principles of both Bitcoin Cash and Nostr.
 
-### Next steps for a production-ready bounty submission
-1. `npm install` (clean environment recommended)
-2. Wire real `bitcoinjs-message` verification into `lib/bch/verify-message.ts`
-3. Wire `nostr-tools` `verifyEvent` into the Nostr proof path
-4. Add relay publish/fetch in Discover using a SimplePool
-5. Optional: NIP-07 auto-detect button on the Link page
-6. Expand adversarial tests (tampered payloads, expired challenges, wrong network, etc.)
-7. `npm run build` && deploy to Vercel
-
-The cryptographic design and independent verifier are the strongest parts of the submission and are already in place.
-
-### Session progress (continued)
-
-- Real dynamic loading of `bitcoinjs-message` and `nostr-tools` for cryptographic verification
-- NIP-07 detection + one-click connect/sign on Link Identity
-- Local binding storage (My Identity page fully functional)
-- Relay discovery & publish helpers (`lib/nostr/discovery.ts`)
-- Architecture documentation
-- Expanded unit tests (tamper detection, export/import, challenge uniqueness)
-- Discover page wired to relay query (graceful when libs missing)
-
-After a clean `npm install` the full dual-proof cryptographic path and relay features become active.
+**Not an official Paytaca or ParyonUSD product.**
