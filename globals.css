@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bch-green: #0AC18E;
+  --surface: #0F1419;
+  --surface-card: #1A2332;
+  --surface-elevated: #243044;
+}
+
+body {
+  background: var(--surface);
+  color: #E8EEF5;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--bch-green);
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0F1419;
+}
+::-webkit-scrollbar-thumb {
+  background: #243044;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0AC18E;
+}
